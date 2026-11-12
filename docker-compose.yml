@@ -1,0 +1,19 @@
+# Serviços locais sem cobrança de API. Uso: docker compose up -d
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pregador
+      POSTGRES_PASSWORD: pregador
+      POSTGRES_DB: pregador
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+  ollama:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    ports: ["127.0.0.1:11434:11434"]
+    volumes: [ollamadata:/root/.ollama]
+volumes:
+  dbdata:
+  ollamadata:

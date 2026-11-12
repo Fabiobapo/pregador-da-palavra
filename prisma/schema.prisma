@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PASTOR
+  PREACHER
+  EDITOR
+  MEDIA_OPERATOR
+  READER
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  memberships   Membership[]
+  sermons       Sermon[]
+  aiConsentAt   DateTime?
+  passwordResets PasswordReset[]
+}
+
+model Church {
+  id          String          @id @default(cuid())
+  name        String
+  createdAt   DateTime        @default(now())
+  memberships Membership[]
+  invites     Invite[]
+  auditLogs   AuditLog[]
+  sermons     Sermon[]
+  holyrics    HolyricsConfig?
+  documents   Document[]
+}
+
+// Todo dado futuro (sermões, imagens, Holyrics) deve levar churchId.
+model Membership {
+  id       String @id @default(cuid())
+  userId   String
+  churchId String
+  role     Role   @default(READER)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  church   Church @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, churchId])
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  churchId  String
+  email     String
+  role      Role      @default(READER)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  userId    String?
+  church    Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  churchId  String?
+  userId    String?
+  action    String
+  createdAt DateTime @default(now())
+  church    Church?  @relation(fields: [churchId], references: [id], onDelete: SetNull)
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model HolyricsConfig {
+  id           String  @id @default(cuid())
+  churchId     String  @unique
+  host         String  @default("127.0.0.1")
+  port         Int     @default(8091)
+  pathPrefix   String  @default("/api/")
+  connectorUrl String?
+  connectorKey String?
+  baseUrl      String?
+  secretEnc    String  @default("")
+  secret       String?
+  enabled      Boolean @default(true)
+  textBody     String  @default("")
+  updatedById  String?
+  church       Church  @relation(fields: [churchId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  churchId    String
+  authorId    String
+  createdById String?
+  title       String
+  tipo        String   @default("Sermão")
+  type        String   @default("SERMON")
+  ref         String   @default("")
+  status      String   @default("Rascunho")
+  content     String   @default("")
+  tags        String[] @default([])
+  blocks      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  church      Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@index([churchId])
+}
+
+model Sermon {
+  id           String   @id @default(cuid())
+  churchId     String
+  userId       String
+  title        String
+  type         String   @default("Sermão")
+  date         String   @default("")
+  author       String   @default("")
+  tags         String   @default("")
+  reference    String   @default("")
+  verse        String   @default("")
+  duration     Int      @default(30)
+  status       String   @default("Rascunho")
+  points       Json     @default("[]")
+  privateNotes String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  church       Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([churchId, updatedAt])
+  @@index([userId])
+}
